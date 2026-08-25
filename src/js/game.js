@@ -176,6 +176,22 @@ function ghostTarget( game, g ) {
   return { x: px, y: py };
 }
 
+// Mueve al fantasma dentro de la pen: oscila arriba/abajo.
+// Si penDir es 'up' y esta en y<=12, se libera.
+function moveInPen( game, g ) {
+  const grid = game.grid;
+  if ( !canMove( grid, g.x, g.y, g.penDir, 'ghost' ) ) {
+    g.penDir = g.penDir === 'up' ? 'down' : 'up';
+  }
+  if ( g.penDir === 'up' && g.y <= 12 ) {
+    g.released = true;
+    return;
+  }
+  const d = DIRS[ g.penDir ];
+  g.x += d.x * g.speed;
+  g.y += d.y * g.speed;
+}
+
 // Despacho total por kind: todo fantasma decide con chooseDir hacia su objetivo.
 function decideGhost( game, g ) {
   g.dir = chooseDir( game.grid, g, ghostTarget( game, g ) );
