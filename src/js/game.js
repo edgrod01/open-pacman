@@ -14,6 +14,7 @@ const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const AMBUSH_AHEAD = 4;     // celdas delante de Pacman para el objetivo de 'ambush'
 const FLANK_AHEAD = 2;      // celdas delante de Pacman antes de reflejar respecto al hunter
+const SHY_THRESHOLD = 8;    // distancia Manhattan a la que 'shy' se retira a su esquina
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -137,7 +138,6 @@ function chooseDir( grid, g, target ) {
 }
 
 // Objetivo del fantasma segun su kind (celda de referencia de chooseDir).
-// Devuelve null para kinds aun sin IA propia (caen en la rama aleatoria).
 function ghostTarget( game, g ) {
   const p = game.pacman;
   const px = Math.round( p.x );
@@ -159,23 +159,22 @@ function ghostTarget( game, g ) {
     const ref = game.ghosts[ 0 ];
     return { x: ax + ( ax - Math.round( ref.x ) ), y: ay + ( ay - Math.round( ref.y ) ) };
   }
-  return null;
+  // Persigue a Pacman; si le pone a SHY_THRESHOLD o menos, huye a su esquina
+  // inferior-izquierda (el selector solo compara distancias; no hace falta
+  // que la celda sea transitable).
+  if ( g.kind === 'shy' ) {
+    const dist = Math.abs( px - Math.round( g.x ) ) + Math.abs( py - Math.round( g.y ) );
+    if ( dist <= SHY_THRESHOLD ) {
+      return { x: 0, y: game.grid.length - 1 };
+    }
+    return { x: px, y: py };
+  }
+  return { x: px, y: py };
 }
 
+// Despacho total por kind: todo fantasma decide con chooseDir hacia su objetivo.
 function decideGhost( game, g ) {
-  const grid = game.grid;
-  const target = ghostTarget( game, g );
-  if ( target ) g.dir = chooseDir( grid, g, target );
-  else g.dir = choicesRandom( grid, g );
-}
-
-// Rama temporal aleatoria para los kinds aun no implementados (pasos 3-5).
-function choicesRandom( grid, g ) {
-  const options = Object.keys( DIRS ).filter(
-    ( dir ) => dir !== OPPOSITE[ g.dir ] && canMove( grid, g.x, g.y, dir, 'ghost' )
-  );
-  const choices = options.length ? options : [ OPPOSITE[ g.dir ] ];
-  return choices[ Math.floor( Math.random() * choices.length ) ];
+  g.dir = chooseDir( game.grid, g, ghostTarget( game, g ) );
 }
 
 function moveGhost( game, g ) {
