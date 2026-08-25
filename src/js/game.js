@@ -13,6 +13,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const AMBUSH_AHEAD = 4;     // celdas delante de Pacman para el objetivo de 'ambush'
+const FLANK_AHEAD = 2;      // celdas delante de Pacman antes de reflejar respecto al hunter
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -148,6 +149,15 @@ function ghostTarget( game, g ) {
   if ( g.kind === 'ambush' ) {
     const d = DIRS[ p.dir ];
     return { x: px + d.x * AMBUSH_AHEAD, y: py + d.y * AMBUSH_AHEAD };
+  }
+  // Punto FLANK_AHEAD celdas delante de Pacman reflejado respecto al hunter
+  // (game.ghosts[0], vector tipo Inky/Blinky). Orden de GHOST_STARTS contractual.
+  if ( g.kind === 'flank' ) {
+    const d = DIRS[ p.dir ];
+    const ax = px + d.x * FLANK_AHEAD;
+    const ay = py + d.y * FLANK_AHEAD;
+    const ref = game.ghosts[ 0 ];
+    return { x: ax + ( ax - Math.round( ref.x ) ), y: ay + ( ay - Math.round( ref.y ) ) };
   }
   return null;
 }
