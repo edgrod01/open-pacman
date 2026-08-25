@@ -12,6 +12,9 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const AMBUSH_AHEAD = 4;     // celdas delante de Pacman para el objetivo de 'ambush'
+const FLANK_AHEAD = 2;      // celdas delante de Pacman antes de reflejar respecto al hunter
+const SHY_THRESHOLD = 8;    // distancia Manhattan a la que 'shy' se retira a su esquina
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -110,35 +113,68 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-function decideGhost( game, g ) {
-  const grid = game.grid;
-  const p = game.pacman;
-
+// Selector comun de direccion hacia un objetivo: elige la direccion valida
+// (sin media vuelta salvo callejon) que minimiza la distancia Manhattan al
+// objetivo. Desempate estable: gana la primera en orden left/right/up/down.
+function chooseDir( grid, g, target ) {
   const options = Object.keys( DIRS ).filter(
     ( dir ) => dir !== OPPOSITE[ g.dir ] && canMove( grid, g.x, g.y, dir, 'ghost' )
   );
   // Sin salida (callejon): permitir el giro de 180.
-  const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
+  const choices = options.length ? options : [ OPPOSITE[ g.dir ] ];
+  let best = choices[ 0 ];
+  let bestDist = Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const nx = g.x + d.x;
+    const ny = g.y + d.y;
+    const dist = Math.abs( nx - target.x ) + Math.abs( ny - target.y );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  return best;
+}
+
+// Objetivo del fantasma segun su kind (celda de referencia de chooseDir).
+function ghostTarget( game, g ) {
+  const p = game.pacman;
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
 
   if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
-      }
-    }
-    g.dir = best;
-  } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
+    return { x: px, y: py };
   }
+  if ( g.kind === 'ambush' ) {
+    const d = DIRS[ p.dir ];
+    return { x: px + d.x * AMBUSH_AHEAD, y: py + d.y * AMBUSH_AHEAD };
+  }
+  // Punto FLANK_AHEAD celdas delante de Pacman reflejado respecto al hunter
+  // (game.ghosts[0], vector tipo Inky/Blinky). Orden de GHOST_STARTS contractual.
+  if ( g.kind === 'flank' ) {
+    const d = DIRS[ p.dir ];
+    const ax = px + d.x * FLANK_AHEAD;
+    const ay = py + d.y * FLANK_AHEAD;
+    const ref = game.ghosts[ 0 ];
+    return { x: ax + ( ax - Math.round( ref.x ) ), y: ay + ( ay - Math.round( ref.y ) ) };
+  }
+  // Persigue a Pacman; si le pone a SHY_THRESHOLD o menos, huye a su esquina
+  // inferior-izquierda (el selector solo compara distancias; no hace falta
+  // que la celda sea transitable).
+  if ( g.kind === 'shy' ) {
+    const dist = Math.abs( px - Math.round( g.x ) ) + Math.abs( py - Math.round( g.y ) );
+    if ( dist <= SHY_THRESHOLD ) {
+      return { x: 0, y: game.grid.length - 1 };
+    }
+    return { x: px, y: py };
+  }
+  return { x: px, y: py };
+}
+
+// Despacho total por kind: todo fantasma decide con chooseDir hacia su objetivo.
+function decideGhost( game, g ) {
+  g.dir = chooseDir( game.grid, g, ghostTarget( game, g ) );
 }
 
 function moveGhost( game, g ) {
