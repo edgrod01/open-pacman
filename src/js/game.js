@@ -229,6 +229,9 @@ function resetPositions( game ) {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.released = false;
+    g.releaseFrame = GHOST_STARTS[ i ].releaseDelay;
+    g.penDir = 'up';
   } );
 }
 
