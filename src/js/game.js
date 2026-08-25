@@ -237,6 +237,14 @@ function collides( a, b ) {
 }
 
 function update( game ) {
+  game.frameCount++;
+  game.ghosts.forEach( ( g ) => {
+    if ( !g.released ) {
+      g.releaseFrame--;
+      if ( g.releaseFrame <= 0 ) g.released = true;
+    }
+  } );
+
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
