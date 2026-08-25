@@ -12,6 +12,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const AMBUSH_AHEAD = 4;     // celdas delante de Pacman para el objetivo de 'ambush'
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -134,15 +135,28 @@ function chooseDir( grid, g, target ) {
   return best;
 }
 
-function decideGhost( game, g ) {
-  const grid = game.grid;
+// Objetivo del fantasma segun su kind (celda de referencia de chooseDir).
+// Devuelve null para kinds aun sin IA propia (caen en la rama aleatoria).
+function ghostTarget( game, g ) {
   const p = game.pacman;
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
 
   if ( g.kind === 'hunter' ) {
-    g.dir = chooseDir( grid, g, { x: Math.round( p.x ), y: Math.round( p.y ) } );
-  } else {
-    g.dir = choicesRandom( grid, g );
+    return { x: px, y: py };
   }
+  if ( g.kind === 'ambush' ) {
+    const d = DIRS[ p.dir ];
+    return { x: px + d.x * AMBUSH_AHEAD, y: py + d.y * AMBUSH_AHEAD };
+  }
+  return null;
+}
+
+function decideGhost( game, g ) {
+  const grid = game.grid;
+  const target = ghostTarget( game, g );
+  if ( target ) g.dir = chooseDir( grid, g, target );
+  else g.dir = choicesRandom( grid, g );
 }
 
 // Rama temporal aleatoria para los kinds aun no implementados (pasos 3-5).
