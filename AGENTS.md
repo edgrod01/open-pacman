@@ -3,7 +3,7 @@
 Vanilla JS + HTML + Canvas Pac-Man clone. No build system, no npm, no test framework.
 
 ## Run / verify
-- Open `src/index.html` in a browser. There is no dev server, bundler, or test runner.
+- Run with `open src/index.html` (macOS). There is no dev server, bundler, test runner, or linter.
 - After changes, verify by reloading the page and playing (arrow keys). There are no automated tests.
 
 ## Architecture (no modules — globals on `window`)
