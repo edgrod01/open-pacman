@@ -45,7 +45,11 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      released: false,
+      releaseFrame: g.releaseDelay,
+      penDir: 'up',
     } ) ),
+    frameCount: 0,
   };
 }
 
