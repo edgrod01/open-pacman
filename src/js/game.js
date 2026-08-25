@@ -45,7 +45,11 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      released: false,
+      releaseFrame: g.releaseDelay,
+      penDir: 'up',
     } ) ),
+    frameCount: 0,
   };
 }
 
@@ -172,6 +176,26 @@ function ghostTarget( game, g ) {
   return { x: px, y: py };
 }
 
+// Mueve al fantasma dentro de la pen: oscila arriba/abajo.
+// Si penDir es 'up' y esta en y<=12, se libera.
+function moveInPen( game, g ) {
+  const grid = game.grid;
+  if ( aligned( g.x ) && aligned( g.y ) ) {
+    g.x = Math.round( g.x );
+    g.y = Math.round( g.y );
+    if ( g.penDir === 'up' && g.y <= 12 ) {
+      g.released = true;
+      return;
+    }
+    if ( !canMove( grid, g.x, g.y, g.penDir, 'ghost' ) ) {
+      g.penDir = g.penDir === 'up' ? 'down' : 'up';
+    }
+  }
+  const d = DIRS[ g.penDir ];
+  g.x += d.x * g.speed;
+  g.y += d.y * g.speed;
+}
+
 // Despacho total por kind: todo fantasma decide con chooseDir hacia su objetivo.
 function decideGhost( game, g ) {
   g.dir = chooseDir( game.grid, g, ghostTarget( game, g ) );
@@ -180,6 +204,11 @@ function decideGhost( game, g ) {
 function moveGhost( game, g ) {
   const grid = game.grid;
   const width = grid[ 0 ].length;
+
+  if ( !g.released ) {
+    moveInPen( game, g );
+    return;
+  }
 
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
@@ -204,6 +233,9 @@ function resetPositions( game ) {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.released = false;
+    g.releaseFrame = GHOST_STARTS[ i ].releaseDelay;
+    g.penDir = 'up';
   } );
 }
 
@@ -212,6 +244,14 @@ function collides( a, b ) {
 }
 
 function update( game ) {
+  game.frameCount++;
+  game.ghosts.forEach( ( g ) => {
+    if ( !g.released ) {
+      g.releaseFrame--;
+      if ( g.releaseFrame <= 0 ) g.released = true;
+    }
+  } );
+
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
