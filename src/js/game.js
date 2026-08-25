@@ -180,12 +180,16 @@ function ghostTarget( game, g ) {
 // Si penDir es 'up' y esta en y<=12, se libera.
 function moveInPen( game, g ) {
   const grid = game.grid;
-  if ( !canMove( grid, g.x, g.y, g.penDir, 'ghost' ) ) {
-    g.penDir = g.penDir === 'up' ? 'down' : 'up';
-  }
-  if ( g.penDir === 'up' && g.y <= 12 ) {
-    g.released = true;
-    return;
+  if ( aligned( g.x ) && aligned( g.y ) ) {
+    g.x = Math.round( g.x );
+    g.y = Math.round( g.y );
+    if ( g.penDir === 'up' && g.y <= 12 ) {
+      g.released = true;
+      return;
+    }
+    if ( !canMove( grid, g.x, g.y, g.penDir, 'ghost' ) ) {
+      g.penDir = g.penDir === 'up' ? 'down' : 'up';
+    }
   }
   const d = DIRS[ g.penDir ];
   g.x += d.x * g.speed;
